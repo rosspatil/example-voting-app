@@ -7,9 +7,28 @@ import org.json.JSONObject;
 
 class Worker {
   public static void main(String[] args) {
+    String redisHost = "redis";
+    String pgHost = "db";
     try {
-      Jedis redis = connectToRedis("redis");
-      Connection dbConn = connectToDB("db");
+      redisHost = System.getenv("REDIS_HOST");
+    } catch (Exception e) {
+      redisHost = "redis";
+    }
+    try {
+      pgHost = System.getenv("PG_HOST");
+    } catch (Exception e) {
+      pgHost = "db";
+    }
+    if (redisHost == null) {
+      redisHost = "redis";
+    }
+     if (pgHost == null) {
+      pgHost = "db";
+    }
+
+    try {
+      Connection dbConn = connectToDB(pgHost);
+      Jedis redis = connectToRedis(redisHost);
 
       System.err.println("Watching vote queue");
 
@@ -64,15 +83,23 @@ class Worker {
 
   static Connection connectToDB(String host) throws SQLException {
     Connection conn = null;
+    String pgPassword = "postgres";
+    try {
+      pgPassword = System.getenv("PG_PASSWORD");
+    } catch (Exception e) {
+      pgPassword = "postgres";
+    }
+    if (pgPassword == null) {
+      pgPassword = "postgres";
+    }
 
     try {
-
       Class.forName("org.postgresql.Driver");
       String url = "jdbc:postgresql://" + host + "/postgres";
 
       while (conn == null) {
         try {
-          conn = DriverManager.getConnection(url, "postgres", "postgres");
+          conn = DriverManager.getConnection(url, "postgres", pgPassword);
         } catch (SQLException e) {
           System.err.println("Waiting for db");
           sleep(1000);

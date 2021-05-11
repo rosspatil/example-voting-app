@@ -8,6 +8,8 @@ import logging
 
 option_a = os.getenv('OPTION_A', "Cats")
 option_b = os.getenv('OPTION_B', "Dogs")
+redisHost = os.getenv('REDIS_HOST', "redis")
+
 hostname = socket.gethostname()
 
 app = Flask(__name__)
@@ -16,12 +18,20 @@ gunicorn_error_logger = logging.getLogger('gunicorn.error')
 app.logger.handlers.extend(gunicorn_error_logger.handlers)
 app.logger.setLevel(logging.INFO)
 
+
 def get_redis():
-    if not hasattr(g, 'redis'):
-        g.redis = Redis(host="redis", db=0, socket_timeout=5)
+    if not hasattr(g, redisHost):
+        app.logger.info('here redis not found: %s', redisHost)
+        g.redis = Redis(host=redisHost, db=0, socket_timeout=5)
     return g.redis
 
-@app.route("/", methods=['POST','GET'])
+
+@app.route("/health", methods=['GET'])
+def health():
+    return make_response("", 200)
+
+
+@app.route("/", methods=['POST', 'GET'])
 def hello():
     voter_id = request.cookies.get('voter_id')
     if not voter_id:

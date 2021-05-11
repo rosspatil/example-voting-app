@@ -10,11 +10,22 @@ networks:
     driver: bridge
 
 services:
-  vote:
-    build: ./vote
-    command: python app.py
+  worker:
+    image: cldcvr/codepipes-example-worker
+    build:
+      context: ./worker
     depends_on:
       - redis
+      - db
+    networks:
+      - back-tier
+
+  vote:
+    image: cldcvr/codepipes-example-vote
+    build: ./vote
+    depends_on:
+      - redis
+      - worker
     volumes:
       - ./vote:/app
     ports:
@@ -24,10 +35,11 @@ services:
       - back-tier
 
   result:
+    image: cldcvr/codepipes-example-result
     build: ./result
-    command: nodemon server.js
     depends_on:
       - db
+      - worker
     volumes:
       - ./result:/app
     ports:
@@ -37,22 +49,10 @@ services:
       - front-tier
       - back-tier
 
-  worker:
-    build:
-      context: ./worker
-    depends_on:
-      - redis
-      - db
-    networks:
-      - back-tier
+  
 
   redis:
-    image: redis:5.0-alpine3.10
-    volumes:
-      - "./healthchecks:/healthchecks"
-    healthcheck:
-      test: /healthchecks/redis.sh
-      interval: "5s"
+    image: redis
     ports: ["6379"]
     networks:
       - back-tier
@@ -64,9 +64,5 @@ services:
       POSTGRES_PASSWORD: "postgres"
     volumes:
       - "./db-data:/var/lib/postgresql/data"
-      - "./healthchecks:/healthchecks"
-    healthcheck:
-      test: /healthchecks/postgres.sh
-      interval: "5s"
     networks:
       - back-tier
